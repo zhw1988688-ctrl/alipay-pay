@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>向商户付款</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #F5F5F5; min-height: 100vh; padding-bottom: 300px;
+        }
+        .header {
+            background: #fff; padding: 12px 16px; display: flex;
+            align-items: center; border-bottom: 1px solid #eee;
+        }
+        .back { font-size: 22px; color: #333; width: 30px; cursor: pointer; }
+        .title { flex: 1; text-align: center; font-size: 17px; color: #333; font-weight: 500; }
+        .more { width: 30px; text-align: right; font-size: 18px; color: #333; cursor: pointer; }
+        .merchant {
+            background: #fff; padding: 20px 16px; display: flex;
+            align-items: center; margin-top: 10px;
+        }
+        .icon {
+            width: 40px; height: 40px; border-radius: 50%; background: #1677FF;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 18px; margin-right: 12px;
+        }
+        .name { font-size: 16px; color: #333; }
+        .amount-area {
+            background: #fff; padding: 30px 16px; margin-top: 1px; text-align: center;
+        }
+        .label { font-size: 14px; color: #999; margin-bottom: 15px; }
+        .input-wrap {
+            display: flex; align-items: center; justify-content: center;
+            border-bottom: 1px solid #1677FF; padding-bottom: 10px; margin: 0 30px;
+        }
+        .symbol { font-size: 32px; color: #333; margin-right: 8px; }
+        #amountInput {
+            border: none; outline: none; font-size: 48px; color: #333;
+            width: 60%; text-align: left; background: transparent;
+        }
+        #amountInput::placeholder { color: #ccc; font-size: 22px; }
+        .note {
+            background: #fff; padding: 14px 16px; margin-top: 1px;
+            font-size: 14px; color: #999; display: flex; align-items: center;
+        }
+        .note span { color: #bbb; margin-left: 6px; }
+        .keyboard {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: #D1D5DB; padding: 1px; display: grid;
+            grid-template-columns: repeat(4, 1fr); gap: 1px;
+            user-select: none;
+        }
+        .key {
+            background: #fff; height: 56px; display: flex;
+            align-items: center; justify-content: center;
+            font-size: 24px; color: #333; border: none; cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .key:active { background: #e0e0e0; }
+        .confirm {
+            background: #1677FF !important; color: #fff !important;
+            font-size: 17px !important; grid-row: span 2; height: auto;
+        }
+        .confirm:active { background: #0958D9 !important; }
+        .del { font-size: 18px !important; }
+
+        /* 确认页面 */
+        #confirmPage {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #1677FF; color: #fff; flex-direction: column;
+            align-items: center; padding: 80px 20px 20px; z-index: 100;
+        }
+        #confirmPage.show { display: flex; }
+        .c-name { font-size: 16px; opacity: 0.9; margin-bottom: 10px; }
+        .c-amount { font-size: 56px; font-weight: bold; margin: 10px 0; }
+        .c-currency { font-size: 24px; }
+        .c-rate {
+            margin-top: 15px; font-size: 13px; opacity: 0.7;
+            background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 16px;
+        }
+        .c-btn {
+            margin-top: 50px; width: 80%; max-width: 300px; padding: 16px;
+            background: #fff; color: #1677FF; border: none; border-radius: 24px;
+            font-size: 18px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .c-btn:active { transform: scale(0.98); }
+        .c-tips {
+            margin-top: 30px; font-size: 13px; opacity: 0.7;
+            text-align: center; line-height: 1.8;
+        }
+        .manual {
+            margin-top: 20px; background: rgba(255,255,255,0.1);
+            border-radius: 12px; padding: 16px; width: 90%; max-width: 340px;
+            display: none;
+        }
+        .manual.show { display: block; }
+        .m-row {
+            display: flex; justify-content: space-between; align-items: center;
+            margin: 6px 0; background: rgba(255,255,255,0.1);
+            padding: 10px 12px; border-radius: 8px; font-size: 14px;
+        }
+        .m-btn {
+            background: transparent; border: 1px solid rgba(255,255,255,0.5);
+            color: #fff; padding: 3px 10px; border-radius: 10px;
+            font-size: 12px; cursor: pointer;
+        }
+        .c-small-btn {
+            margin-top: 12px; background: rgba(255,255,255,0.2);
+            color: #fff; padding: 10px 24px; border-radius: 20px;
+            border: none; font-size: 13px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 输入页面 -->
+<div id="inputPage">
+    <div class="header">
+        <div class="back" onclick="history.back()">&#8249;</div>
+        <div class="title">向商户付款</div>
+        <div class="more">&#8942;</div>
+    </div>
+    <div class="merchant">
+        <div class="icon">收</div>
+        <div class="name">收银台</div>
+    </div>
+    <div class="amount-area">
+        <div class="label">金额</div>
+        <div class="input-wrap">
+            <span class="symbol">¥</span>
+            <input type="number" id="amountInput" placeholder="请输入付款金额" step="0.01">
+        </div>
+    </div>
+    <div class="note">备注：<span>+添加备注</span></div>
+
+    <div class="keyboard">
+        <button class="key" onclick="append('1')">1</button>
+        <button class="key" onclick="append('2')">2</button>
+        <button class="key" onclick="append('3')">3</button>
+        <button class="key del" onclick="del()">← ×</button>
+
+        <button class="key" onclick="append('4')">4</button>
+        <button class="key" onclick="append('5')">5</button>
+        <button class="key" onclick="append('6')">6</button>
+        <button class="key confirm" onclick="goConfirm()">确认<br>支付</button>
+
+        <button class="key" onclick="append('7')">7</button>
+        <button class="key" onclick="append('8')">8</button>
+        <button class="key" onclick="append('9')">9</button>
+
+        <button class="key" onclick="append('0')" style="grid-column: 1 / span 2;">0</button>
+        <button class="key" onclick="append('.')">.</button>
+    </div>
+</div>
+
+<!-- 确认/唤起页面 -->
+<div id="confirmPage">
+    <div class="c-name">向 <span id="accName"></span> 付款</div>
+    <div class="c-amount"><span class="c-currency">¥</span><span id="cAmount"></span></div>
+    <div class="c-rate" id="cRate"></div>
+
+    <button class="c-btn" onclick="jumpToAlipay()">打开支付宝支付</button>
+
+    <div class="c-tips">
+        点击上方按钮将自动唤起支付宝APP<br>
+        若无法自动跳转，请使用手动方式
+    </div>
+
+    <div class="manual" id="manualBox">
+        <div class="m-row">
+            <span>账号：<span id="mAcc"></span></span>
+            <button class="m-btn" onclick="copy(acc)">复制</button>
+        </div>
+        <div class="m-row">
+            <span>金额：¥<span id="mAmt"></span></span>
+            <button class="m-btn" onclick="copy(amt)">复制</button>
+        </div>
+        <p style="margin-top:10px; font-size:11px; opacity:0.6; text-align:center;">
+            复制后打开支付宝 → 转账 → 粘贴账号和金额
+        </p>
+    </div>
+
+    <button class="c-small-btn" onclick="toggleManual()">手动支付</button>
+    <button class="c-small-btn" onclick="backToInput()" style="margin-top:6px;">返回修改金额</button>
+</div>
+
+<script>
+    // 从URL参数读取支付宝账号（手机号/邮箱）
+    const params = new URLSearchParams(location.search);
+    const acc = params.get('account') || '';
+    let amt = '';
+
+    if (!acc) {
+        alert('缺少支付宝账号参数，请在URL后加 ?account=你的账号');
+    }
+
+    function append(n) {
+        const input = document.getElementById('amountInput');
+        if (n === '.' && input.value.includes('.')) return;
+        if (input.value.length > 8) return;
+        input.value += n;
+    }
+    function del() {
+        const input = document.getElementById('amountInput');
+        input.value = input.value.slice(0, -1);
+    }
+    function goConfirm() {
+        amt = document.getElementById('amountInput').value;
+        if (!amt || parseFloat(amt) <= 0) {
+            alert('请输入金额');
+            return;
+        }
+        document.getElementById('inputPage').style.display = 'none';
+        document.getElementById('confirmPage').classList.add('show');
+        document.getElementById('accName').textContent = acc;
+        document.getElementById('cAmount').textContent = amt;
+
+        // 显示汇率估算
+        const rate = 3500;
+        const vnd = (parseFloat(amt) * rate).toLocaleString();
+        document.getElementById('cRate').textContent = '约合 ' + vnd + ' 越南盾';
+    }
+    function backToInput() {
+        document.getElementById('confirmPage').classList.remove('show');
+        document.getElementById('inputPage').style.display = 'block';
+    }
+    function jumpToAlipay() {
+        // 尝试用支付宝Scheme唤起转账页并带金额
+        const scheme = 'alipays://platformapi/startapp?appId=20000123&actionType=toAccount&account=' + encodeURIComponent(acc) + '&amount=' + amt;
+        window.location.href = scheme;
+
+        // 2.5秒后如果还在页面，说明唤起失败，显示手动方式
+        setTimeout(() => {
+            document.getElementById('manualBox').classList.add('show');
+        }, 2500);
+    }
+    function toggleManual() {
+        const box = document.getElementById('manualBox');
+        box.classList.toggle('show');
+        if (box.classList.contains('show')) {
+            document.getElementById('mAcc').textContent = acc;
+            document.getElementById('mAmt').textContent = amt;
+        }
+    }
+    function copy(text) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => alert('已复制：' + text));
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta);
+            ta.select(); document.execCommand('copy');
+            document.body.removeChild(ta);
+            alert('已复制：' + text);
+        }
+    }
+</script>
+
+</body>
+</html>
